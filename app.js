@@ -1,39 +1,39 @@
-sync function getweather() {
-    let city = document.getElementById("city").value;
+const cityInput = document.getElementById("city");
+const result = document.getElementById("result");
 
-    if (city === "") {
-        document.getElementById("result").innerHTML = "please enter city";
-        return;
+document.getElementById("searchBtn").addEventListener("click", getWeather);
+cityInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") getWeather();
+});
+
+async function getWeather() {
+  const city = cityInput.value.trim();
+  if (!city) {
+    result.textContent = "Please enter a city name.";
+    return;
+  }
+  result.textContent = "Loading...";
+  try {
+    const geoRes = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`
+    );
+    const geo = await geoRes.json();
+    if (!geo.results) {
+      result.textContent = "City not found.";
+      return;
     }
-
-    let apikey = "0eff84072beb7022af32004f366750b7";
-    let url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apikey}`;
-
-    try {
-        let response = await fetch(url);
-        let data = await response.json();
-
-        if (data.cod === 404) {
-            document.getElementById("result").innerHTML = "city not found";
-            return;
-        }
-        let temp = data.main.temp;
-        let weather = data.weather[0].main;
-        let humidity = data.main.humidity;
-
-        document.getElementById("result").innerHTML =
-            `Temperature: ${temp}°C <br> Weather: ${weather} <br> Humidity: ${humidity}%`;
-            if(weather ==="clouds"){
-        document.body.style.background = "gray";
-    }else if(weather ===  "clear") {
-        document.body.style.background = "yellow";
-    }else {
-        document.body.style.background = "lightblue";
-    }
-
-    } catch (error) {
-        console.log("ERROR:", error);
-        document.getElementById("result").innerHTML = "error fetching data";
-    }
-    }
-    
+    const { latitude, longitude, name, country } = geo.results[0];
+    const res = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m`
+    );
+    const data = await res.json();
+    const c = data.current;
+    result.innerHTML = `
+      <h2>${name}, ${country}</h2>
+      <p>Temperature: ${c.temperature_2m} °C</p>
+      <p>Humidity: ${c.relative_humidity_2m}%</p>
+      <p>Wind: ${c.wind_speed_10m} km/h</p>`;
+  } catch (err) {
+    result.textContent = "Something went wrong. Try again.";
+  }
+}
